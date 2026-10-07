@@ -1,0 +1,204 @@
+@{
+    ViewData["Title"] = "Reports Center";
+    bool isAdmin = User.IsInRole("Admin");
+    bool isManager = User.IsInRole("Manager");
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-bar-chart-line text-primary me-2"></i>Reports & Intelligence</h2>
+        <p class="text-muted small mb-0">Role-scoped executive reporting with filters and CSV export</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Customer Report -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="p-3 bg-primary-subtle text-primary rounded d-inline-block mb-3">
+                        <i class="bi bi-people-fill fs-3"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Customer Report</h5>
+                    <p class="text-muted small">Account health, contact directories, ownership assignments, and customer distribution.</p>
+                </div>
+                <div class="d-flex gap-2 mt-3">
+                    <a asp-action="CustomerReport" class="btn btn-primary btn-sm flex-grow-1">
+                        <i class="bi bi-eye me-1"></i> View Report
+                    </a>
+                    <a asp-action="CustomerReport" asp-route-export="true" class="btn btn-outline-secondary btn-sm" title="Download CSV">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lead Report -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="p-3 bg-info-subtle text-info rounded d-inline-block mb-3">
+                        <i class="bi bi-funnel-fill fs-3"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Lead Report</h5>
+                    <p class="text-muted small">Lead qualification stages, prospect priorities, acquisition sources, and estimated values.</p>
+                </div>
+                <div class="d-flex gap-2 mt-3">
+                    <a asp-action="LeadReport" class="btn btn-primary btn-sm flex-grow-1">
+                        <i class="bi bi-eye me-1"></i> View Report
+                    </a>
+                    <a asp-action="LeadReport" asp-route-export="true" class="btn btn-outline-secondary btn-sm" title="Download CSV">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Opportunity Report -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="p-3 bg-warning-subtle text-warning rounded d-inline-block mb-3">
+                        <i class="bi bi-briefcase-fill fs-3"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Opportunity Report</h5>
+                    <p class="text-muted small">Comprehensive deal tracker with stages, close timelines, and probability weightings.</p>
+                </div>
+                <div class="d-flex gap-2 mt-3">
+                    <a asp-action="OpportunityReport" class="btn btn-primary btn-sm flex-grow-1">
+                        <i class="bi bi-eye me-1"></i> View Report
+                    </a>
+                    <a asp-action="OpportunityReport" asp-route-export="true" class="btn btn-outline-secondary btn-sm" title="Download CSV">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Follow-Up Report -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="p-3 bg-danger-subtle text-danger rounded d-inline-block mb-3">
+                        <i class="bi bi-calendar-check-fill fs-3"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Follow-Up Report</h5>
+                    <p class="text-muted small">SLA compliance, planned commitments, overdue tasks, and client interaction schedule.</p>
+                </div>
+                <div class="d-flex gap-2 mt-3">
+                    <a asp-action="FollowUpReport" class="btn btn-primary btn-sm flex-grow-1">
+                        <i class="bi bi-eye me-1"></i> View Report
+                    </a>
+                    <a asp-action="FollowUpReport" asp-route-export="true" class="btn btn-outline-secondary btn-sm" title="Download CSV">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pipeline Report -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="p-3 bg-primary-subtle text-primary rounded d-inline-block mb-3">
+                        <i class="bi bi-kanban-fill fs-3"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Pipeline Summary</h5>
+                    <p class="text-muted small">Stage-wise and representative-wise weighted pipeline forecasting and deal counts.</p>
+                </div>
+                <div class="d-flex gap-2 mt-3">
+                    <a asp-action="PipelineReport" class="btn btn-primary btn-sm flex-grow-1">
+                        <i class="bi bi-eye me-1"></i> View Report
+                    </a>
+                    <a asp-action="PipelineReport" asp-route-export="true" class="btn btn-outline-secondary btn-sm" title="Download CSV">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conversion & Sales Report -->
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="p-3 bg-success-subtle text-success rounded d-inline-block mb-3">
+                        <i class="bi bi-trophy-fill fs-3"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Sales & Conversion</h5>
+                    <p class="text-muted small">Lead-to-customer conversion velocities, closed-won revenue, and turnaround metrics.</p>
+                </div>
+                <div class="d-flex gap-2 mt-3">
+                    <a asp-action="ConversionReport" class="btn btn-primary btn-sm flex-grow-1">
+                        <i class="bi bi-eye me-1"></i> View Report
+                    </a>
+                    <a asp-action="ConversionReport" asp-route-export="true" class="btn btn-outline-secondary btn-sm" title="Download CSV">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Activity Report (Admin & Manager) -->
+    @if (isAdmin || isManager)
+    {
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body p-4 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="p-3 bg-secondary-subtle text-secondary rounded d-inline-block mb-3">
+                            <i class="bi bi-activity fs-3"></i>
+                        </div>
+                        <h5 class="fw-bold mb-2">User Activity Report</h5>
+                        <p class="text-muted small">Team productivity metrics: calls, meetings, emails, and completed tasks per representative.</p>
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <a asp-action="UserActivityReport" class="btn btn-primary btn-sm flex-grow-1">
+                            <i class="bi bi-eye me-1"></i> View Report
+                        </a>
+                        <a asp-action="UserActivityReport" asp-route-export="true" class="btn btn-outline-secondary btn-sm" title="Download CSV">
+                            <i class="bi bi-download"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Compliance Audit Report (Admin only) -->
+    @if (isAdmin)
+    {
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm border-0 h-100 border-start border-4 border-danger">
+                <div class="card-body p-4 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="p-3 bg-danger-subtle text-danger rounded d-inline-block mb-3">
+                            <i class="bi bi-shield-shaded fs-3"></i>
+                        </div>
+                        <h5 class="fw-bold mb-2 text-danger">Compliance Audit Report</h5>
+                        <p class="text-muted small">Immutable security audit trails, user logins, data modifications, and role updates.</p>
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <a asp-action="AuditReport" class="btn btn-danger btn-sm flex-grow-1">
+                            <i class="bi bi-eye me-1"></i> View Report
+                        </a>
+                        <a asp-action="AuditReport" asp-route-export="true" class="btn btn-outline-secondary btn-sm" title="Download CSV">
+                            <i class="bi bi-download"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

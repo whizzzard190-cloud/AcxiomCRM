@@ -1,0 +1,60 @@
+@model AcxiomCRM.ViewModels.RescheduleFollowUpViewModel
+@{
+    ViewData["Title"] = "Reschedule Follow-Up";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-warning text-dark py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2"></i>Reschedule Follow-Up</h5>
+                    <a asp-action="Index" class="btn btn-outline-dark btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i> Cancel
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <partial name="_ValidationSummary" />
+
+                <div class="mb-3 p-3 bg-light rounded border">
+                    <small class="text-muted d-block">Subject</small>
+                    <strong class="d-block text-dark">@Model.Subject</strong>
+                    <small class="text-muted d-block mt-2">Current Date</small>
+                    <span>@Model.OldFollowUpDate.ToString("MMMM dd, yyyy HH:mm")</span>
+                </div>
+
+                <form asp-action="Reschedule" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="FollowUpId" />
+                    <input type="hidden" asp-for="Subject" />
+                    <input type="hidden" asp-for="OldFollowUpDate" />
+
+                    <div class="mb-3">
+                        <label asp-for="NewFollowUpDate" class="form-label fw-semibold">New Scheduled Date & Time <span class="text-danger">*</span></label>
+                        <input asp-for="NewFollowUpDate" class="form-control" type="datetime-local" />
+                        <span asp-validation-for="NewFollowUpDate" class="text-danger small"></span>
+                        <div class="form-text small">Follow-up date cannot be earlier than today.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Reason" class="form-label fw-semibold">Reason for Rescheduling</label>
+                        <textarea asp-for="Reason" class="form-control" rows="3" placeholder="Client requested later time, conflict, etc."></textarea>
+                        <span asp-validation-for="Reason" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-warning px-4">
+                            <i class="bi bi-check-circle me-1"></i> Confirm Reschedule
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

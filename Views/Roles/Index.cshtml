@@ -1,0 +1,46 @@
+@model List<AcxiomCRM.ViewModels.RoleDetailsViewModel>
+@{
+    ViewData["Title"] = "Roles & Permissions";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-shield-lock text-primary me-2"></i>Roles & Permissions</h2>
+        <p class="text-muted small mb-0">Role-based access control matrix and permission assignments</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    @foreach (var role in Model)
+    {
+        var badgeClass = role.RoleName switch {
+            "Admin" => "bg-danger",
+            "Manager" => "bg-warning text-dark",
+            _ => "bg-info text-dark"
+        };
+
+        <div class="col-lg-4 col-md-6">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold">
+                        <span class="badge @badgeClass me-2">@role.RoleName</span>
+                    </h5>
+                    <span class="badge bg-secondary-subtle text-secondary small">
+                        <i class="bi bi-people me-1"></i> @role.UserCount users
+                    </span>
+                </div>
+                <div class="card-body p-3">
+                    <h6 class="small fw-bold text-muted text-uppercase mb-2">Granted Permissions:</h6>
+                    <div class="d-flex flex-wrap gap-1">
+                        @foreach (var perm in role.Permissions)
+                        {
+                            <span class="badge bg-light text-dark border small py-1 px-2">
+                                <i class="bi bi-check2 text-success me-1"></i> @perm
+                            </span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

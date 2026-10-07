@@ -1,0 +1,99 @@
+@model List<AcxiomCRM.Services.LeadReportItem>
+@{
+    ViewData["Title"] = "Lead Report";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-funnel text-primary me-2"></i>Lead Report</h2>
+        <p class="text-muted small mb-0">Total records: @Model.Count</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="LeadReport" asp-route-export="true" 
+           asp-route-status="@ViewBag.Status" asp-route-priority="@ViewBag.Priority"
+           asp-route-fromDate="@ViewBag.FromDate" asp-route-toDate="@ViewBag.ToDate" 
+           class="btn btn-outline-success">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export to CSV
+        </a>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Reports Home
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-3">
+        <form method="get" asp-action="LeadReport" class="row g-2 align-items-end mb-3">
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Status</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">-- All --</option>
+                    <option value="New" selected="@(ViewBag.Status == "New")">New</option>
+                    <option value="Contacted" selected="@(ViewBag.Status == "Contacted")">Contacted</option>
+                    <option value="Qualified" selected="@(ViewBag.Status == "Qualified")">Qualified</option>
+                    <option value="Unqualified" selected="@(ViewBag.Status == "Unqualified")">Unqualified</option>
+                    <option value="Converted" selected="@(ViewBag.Status == "Converted")">Converted</option>
+                    <option value="Lost" selected="@(ViewBag.Status == "Lost")">Lost</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Priority</label>
+                <select name="priority" class="form-select form-select-sm">
+                    <option value="">-- All --</option>
+                    <option value="High" selected="@(ViewBag.Priority == "High")">High</option>
+                    <option value="Medium" selected="@(ViewBag.Priority == "Medium")">Medium</option>
+                    <option value="Low" selected="@(ViewBag.Priority == "Low")">Low</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">From</label>
+                <input type="date" name="fromDate" value="@ViewBag.FromDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">To</label>
+                <input type="date" name="toDate" value="@ViewBag.ToDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">Filter</button>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light">
+                    <tr>
+                        <th>Code</th>
+                        <th>Lead Name</th>
+                        <th>Company</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>Expected Value</th>
+                        <th>Assigned To</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="9" class="text-center py-4 text-muted">No records match the filter criteria.</td></tr>
+                    }
+                    @foreach (var r in Model)
+                    {
+                        <tr>
+                            <td><span class="badge bg-light text-dark border">@r.Code</span></td>
+                            <td class="fw-semibold">@r.Name</td>
+                            <td>@(r.Company ?? "-")</td>
+                            <td>@r.Email</td>
+                            <td>@r.Phone</td>
+                            <td><span class="badge bg-light text-dark border">@r.Status</span></td>
+                            <td><span class="badge @(r.Priority == "High" ? "bg-danger" : r.Priority == "Medium" ? "bg-warning text-dark" : "bg-secondary")">@r.Priority</span></td>
+                            <td class="fw-bold">@r.ExpectedValue.ToString("C0")</td>
+                            <td>@r.AssignedTo</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

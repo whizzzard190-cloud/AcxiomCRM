@@ -1,0 +1,10 @@
+@if (!ViewData.ModelState.IsValid && ViewData.ModelState.ErrorCount > 0)
+{
+    <div class="alert alert-danger shadow-sm py-2 mb-3" role="alert">
+        <div class="d-flex align-items-center mb-1">
+            <i class="bi bi-exclamation-octagon-fill text-danger me-2"></i>
+            <strong class="text-danger">Please correct the following errors:</strong>
+        </div>
+        <div asp-validation-summary="All" class="text-danger small mb-0 ps-3"></div>
+    </div>
+}

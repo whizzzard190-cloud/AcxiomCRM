@@ -1,0 +1,108 @@
+@model AcxiomCRM.Models.FollowUp
+@{
+    ViewData["Title"] = "Schedule Follow-Up";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-calendar-plus text-primary me-2"></i>Schedule Follow-Up</h5>
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i> Back to List
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <partial name="_ValidationSummary" />
+
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label asp-for="Subject" class="form-label fw-semibold">Subject / Objective <span class="text-danger">*</span></label>
+                            <input asp-for="Subject" class="form-control" placeholder="e.g. Discuss RFP proposal terms" autofocus />
+                            <span asp-validation-for="Subject" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="FollowUpType" class="form-label fw-semibold">Type <span class="text-danger">*</span></label>
+                            <select asp-for="FollowUpType" class="form-select">
+                                <option value="Call">Call</option>
+                                <option value="Meeting">Meeting</option>
+                                <option value="Email">Email</option>
+                                <option value="Task">Task</option>
+                            </select>
+                            <span asp-validation-for="FollowUpType" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="FollowUpDate" class="form-label fw-semibold">Date & Time <span class="text-danger">*</span></label>
+                            <input asp-for="FollowUpDate" class="form-control" type="datetime-local" />
+                            <span asp-validation-for="FollowUpDate" class="text-danger small"></span>
+                            <div class="form-text small">Follow-up date cannot be earlier than today.</div>
+                        </div>
+
+                        @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+                        {
+                            <div class="col-md-6">
+                                <label asp-for="AssignedTo" class="form-label fw-semibold">Assigned To</label>
+                                <select asp-for="AssignedTo" class="form-select" asp-items="ViewBag.Users">
+                                    <option value="">-- Assign to Me (Default) --</option>
+                                </select>
+                                <span asp-validation-for="AssignedTo" class="text-danger small"></span>
+                            </div>
+                        }
+
+                        <div class="col-12">
+                            <div class="p-3 bg-light rounded border">
+                                <h6 class="fw-bold mb-2 small text-primary">
+                                    <i class="bi bi-link-45deg me-1"></i> Associated Entity (Choose at least one)
+                                </h6>
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <label asp-for="CustomerId" class="form-label small text-muted">Customer</label>
+                                        <select asp-for="CustomerId" class="form-select form-select-sm" asp-items="ViewBag.Customers">
+                                            <option value="">-- None --</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label asp-for="LeadId" class="form-label small text-muted">Lead</label>
+                                        <select asp-for="LeadId" class="form-select form-select-sm" asp-items="ViewBag.Leads">
+                                            <option value="">-- None --</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label asp-for="OpportunityId" class="form-label small text-muted">Opportunity</label>
+                                        <select asp-for="OpportunityId" class="form-select form-select-sm" asp-items="ViewBag.Opportunities">
+                                            <option value="">-- None --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label asp-for="Remarks" class="form-label fw-semibold">Agenda / Remarks</label>
+                            <textarea asp-for="Remarks" class="form-control" rows="3" placeholder="Enter talking points, agenda, preparations..."></textarea>
+                            <span asp-validation-for="Remarks" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-calendar-check me-1"></i> Schedule
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

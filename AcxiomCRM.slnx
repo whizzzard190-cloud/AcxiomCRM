@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="AcxiomCRM.csproj" />
+  <Project Path="Tests/Tests.csproj" />
+</Solution>

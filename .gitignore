@@ -1,0 +1,49 @@
+# Build output
+bin/
+obj/
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Test results
+TestResults/
+*.trx
+
+# NuGet
+packages/
+
+# Local development secrets
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+
+# User-specific ASP.NET files
+Properties/serviceDependencies.local.json
+
+# Local databases / database files
+*.mdf
+*.ldf
+*.db
+*.sqlite
+*.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Coverage
+coverage/
+.coverage
+
+# Development configuration containing local seed credentials
+appsettings.Development.json

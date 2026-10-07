@@ -1,0 +1,108 @@
+@model List<AcxiomCRM.Services.PipelineReportItem>
+@{
+    ViewData["Title"] = "Pipeline Report";
+    var ownerWise = ViewBag.OwnerWise as List<AcxiomCRM.Services.PipelineOwnerReportItem> ?? new();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-kanban text-primary me-2"></i>Pipeline Summary Report</h2>
+        <p class="text-muted small mb-0">Stage-wise, owner-wise, and probability-weighted deal pipeline</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="PipelineReport" asp-route-export="true" 
+           asp-route-fromDate="@ViewBag.FromDate" asp-route-toDate="@ViewBag.ToDate" 
+           class="btn btn-outline-success">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export to CSV
+        </a>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Reports Home
+        </a>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Stage-wise table -->
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-bar-chart-steps text-primary me-2"></i>Stage-Wise Pipeline</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Stage</th>
+                                <th>Deals</th>
+                                <th>Pipeline Amount</th>
+                                <th class="text-end">Weighted Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var s in Model)
+                            {
+                                <tr>
+                                    <td class="fw-semibold">@s.Stage</td>
+                                    <td>@s.DealCount</td>
+                                    <td>@s.TotalAmount.ToString("C0")</td>
+                                    <td class="text-end fw-bold text-primary">@s.WeightedAmount.ToString("C0")</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot class="table-light fw-bold">
+                            <tr>
+                                <td>Total</td>
+                                <td>@Model.Sum(s => s.DealCount)</td>
+                                <td>@Model.Sum(s => s.TotalAmount).ToString("C0")</td>
+                                <td class="text-end text-primary">@Model.Sum(s => s.WeightedAmount).ToString("C0")</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Owner-wise table -->
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-person-lines-fill text-warning me-2"></i>Owner-Wise Pipeline</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Owner</th>
+                                <th>Deals</th>
+                                <th>Pipeline Amount</th>
+                                <th class="text-end">Weighted Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var o in ownerWise)
+                            {
+                                <tr>
+                                    <td class="fw-semibold">@o.Owner</td>
+                                    <td>@o.DealCount</td>
+                                    <td>@o.TotalAmount.ToString("C0")</td>
+                                    <td class="text-end fw-bold text-primary">@o.WeightedAmount.ToString("C0")</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot class="table-light fw-bold">
+                            <tr>
+                                <td>Total</td>
+                                <td>@ownerWise.Sum(o => o.DealCount)</td>
+                                <td>@ownerWise.Sum(o => o.TotalAmount).ToString("C0")</td>
+                                <td class="text-end text-primary">@ownerWise.Sum(o => o.WeightedAmount).ToString("C0")</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

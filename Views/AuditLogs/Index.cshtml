@@ -1,0 +1,141 @@
+@model AcxiomCRM.ViewModels.PagedList<AcxiomCRM.Models.AuditLog>
+@{
+    ViewData["Title"] = "Audit Logs";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-journal-text text-primary me-2"></i>Audit Logs</h2>
+        <p class="text-muted small mb-0">Append-only compliance log tracking all business operations and security events</p>
+    </div>
+    <span class="badge bg-secondary-subtle text-secondary py-2 px-3">
+        <i class="bi bi-lock me-1"></i> Read-Only Compliance Log
+    </span>
+</div>
+
+<!-- Filters Card -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-3">
+        <form method="get" asp-action="Index" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold text-muted mb-1">User</label>
+                <select name="userId" class="form-select form-select-sm" asp-items="ViewBag.Users">
+                    <option value="">-- All Accessible Users --</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold text-muted mb-1">Module</label>
+                <select name="module" class="form-select form-select-sm">
+                    <option value="">-- All Modules --</option>
+                    @if (ViewBag.Modules != null)
+                    {
+                        foreach (string m in ViewBag.Modules)
+                        {
+                            <option value="@m" selected="@(ViewBag.CurrentModule == m)">@m</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold text-muted mb-1">Action</label>
+                <select name="actionName" class="form-select form-select-sm">
+                    <option value="">-- All Actions --</option>
+                    @if (ViewBag.Actions != null)
+                    {
+                        foreach (string a in ViewBag.Actions)
+                        {
+                            <option value="@a" selected="@(ViewBag.CurrentAction == a)">@a</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold text-muted mb-1">From Date</label>
+                <input type="date" name="fromDate" value="@ViewBag.FromDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold text-muted mb-1">To Date</label>
+                <input type="date" name="toDate" value="@ViewBag.ToDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-funnel"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="text-muted small">
+                Showing <strong>@Model.Items.Count</strong> of <strong>@Model.Pager.TotalRecords</strong> audit entries
+            </span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light text-muted">
+                    <tr>
+                        <th>Timestamp (UTC)</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Module</th>
+                        <th>Record ID</th>
+                        <th>Result</th>
+                        <th>IP Address</th>
+                        <th class="text-end">Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Items.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">
+                                <i class="bi bi-journal-x fs-2 d-block mb-2"></i>
+                                No audit log records found matching your filter criteria.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var log in Model.Items)
+                    {
+                        var actionBadge = log.Action switch {
+                            "Create" => "bg-success text-white",
+                            "Update" => "bg-primary text-white",
+                            "Deactivate" or "Delete" => "bg-danger text-white",
+                            "Convert" => "bg-info text-dark",
+                            "Login" => "bg-success text-white",
+                            "LoginFailure" or "Lockout" => "bg-danger text-white",
+                            "Unlock" => "bg-warning text-dark",
+                            _ => "bg-secondary text-white"
+                        };
+
+                        <tr>
+                            <td>@log.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            <td>
+                                <strong class="text-dark">@(log.User?.FullName ?? (log.UserId ?? "System"))</strong>
+                            </td>
+                            <td><span class="badge @actionBadge">@log.Action</span></td>
+                            <td><span class="badge bg-light text-dark border">@log.Module</span></td>
+                            <td>@(log.RecordId ?? "-")</td>
+                            <td>
+                                <span class="badge @(log.Result == "Success" ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger")">
+                                    @log.Result
+                                </span>
+                            </td>
+                            <td class="text-muted font-monospace">@(log.IpAddress ?? "-")</td>
+                            <td class="text-end">
+                                <a asp-action="Details" asp-route-id="@log.AuditLogId" class="btn btn-outline-secondary btn-sm py-0 px-2" title="View Payload">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <partial name="_Pager" model="Model.Pager" />
+    </div>
+</div>

@@ -1,0 +1,60 @@
+@model AcxiomCRM.Models.AuditLog
+@{
+    ViewData["Title"] = $"Audit Log Entry #{Model.AuditLogId}";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-shield-check text-primary me-2"></i>Audit Log Record #@Model.AuditLogId</h5>
+                    <small class="text-muted">Recorded at @Model.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss UTC")</small>
+                </div>
+                <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Audit Logs
+                </a>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">Operator / User</small>
+                        <strong class="text-dark">@(Model.User?.FullName ?? (Model.UserId ?? "System"))</strong>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted d-block">Module & Entity</small>
+                        <span class="badge bg-light text-dark border">@Model.Module / @Model.EntityName</span>
+                    </div>
+                    <div class="col-md-2">
+                        <small class="text-muted d-block">Action</small>
+                        <span class="badge bg-primary">@Model.Action</span>
+                    </div>
+                    <div class="col-md-2">
+                        <small class="text-muted d-block">Record ID</small>
+                        <span>@(Model.RecordId ?? "N/A")</span>
+                    </div>
+                    <div class="col-md-2">
+                        <small class="text-muted d-block">Result & IP</small>
+                        <span class="badge @(Model.Result == "Success" ? "bg-success" : "bg-danger")">@Model.Result</span>
+                        <div class="small text-muted font-monospace mt-1">@Model.IpAddress</div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold small text-muted text-uppercase mb-2">Previous State (Old Value)</h6>
+                        <div class="p-3 bg-light rounded border font-monospace small" style="min-height: 180px; max-height: 400px; overflow-y: auto; white-space: pre-wrap;">
+                            @(Model.OldValue ?? "None (New Record)")
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold small text-muted text-uppercase mb-2">Updated State (New Value)</h6>
+                        <div class="p-3 bg-light rounded border font-monospace small" style="min-height: 180px; max-height: 400px; overflow-y: auto; white-space: pre-wrap;">
+                            @(Model.NewValue ?? "None (Deleted / Deactivated)")
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

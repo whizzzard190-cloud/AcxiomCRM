@@ -1,0 +1,12 @@
+# AcxiomCRM rules
+- Full spec and rules: docs/ACXIOMCRM_PROMPT.md (read only the sections relevant to the current task).
+- Stack: ASP.NET Core MVC + Web API, Identity, EF Core, SQL Server (LocalDB), Bootstrap 5 CDN, Chart.js. No Tailwind, no npm.
+- Keep code simple and minimal. No extra frameworks or abstractions. Edit only what is needed.
+- Enforce authorization and validation on the server. Never log or return secrets.
+- No hard-coded passwords or connection secrets; use user-secrets.
+- Build and test after each phase, report honestly, never claim PASS without running it.
+- Do one phase at a time and stop.
+- Run builds as: dotnet build --nologo -v q
+- Run tests as: dotnet test --nologo --logger "console;verbosity=minimal"
+- Never paste full build/test logs; report only errors, important warnings, and pass/fail counts.
+- Do not read bin/, obj/, Migrations/*.Designer.cs or wwwroot/lib.

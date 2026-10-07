@@ -1,0 +1,63 @@
+@model AcxiomCRM.ViewModels.RegisterViewModel
+@{
+    ViewData["Title"] = "Create Account";
+    Layout = "_Layout";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow border-0 rounded-3">
+            <div class="card-header bg-primary text-white text-center py-4 rounded-top-3">
+                <h3 class="mb-0 fw-bold"><i class="bi bi-person-plus-fill me-2"></i>Join AcxiomCRM</h3>
+                <small class="text-white-50">Create Sales Executive Account</small>
+            </div>
+            <div class="card-body p-4">
+                <partial name="_Alerts" />
+                <partial name="_ValidationSummary" />
+
+                <form asp-action="Register" asp-controller="Account" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <div class="mb-3">
+                        <label asp-for="FullName" class="form-label fw-semibold">Full Name</label>
+                        <input asp-for="FullName" class="form-control" placeholder="e.g. Johnathan Vance" autofocus />
+                        <span asp-validation-for="FullName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label fw-semibold">Email Address</label>
+                        <input asp-for="Email" class="form-control" placeholder="name@company.com" autocomplete="username" />
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label fw-semibold">Password</label>
+                        <input asp-for="Password" class="form-control" placeholder="Min. 8 chars (Uppercase, Lowercase, Number, Symbol)" autocomplete="new-password" />
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                        <div class="form-text small">Must contain at least 8 characters, 1 uppercase, 1 lowercase, 1 number, and 1 special symbol.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="ConfirmPassword" class="form-label fw-semibold">Confirm Password</label>
+                        <input asp-for="ConfirmPassword" class="form-control" placeholder="Re-enter password" autocomplete="new-password" />
+                        <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-grid mb-3">
+                        <button type="submit" class="btn btn-primary py-2 fw-semibold">
+                            <i class="bi bi-check2-circle me-1"></i> Register as Sales Executive
+                        </button>
+                    </div>
+
+                    <div class="text-center text-muted small">
+                        Already have an account? <a asp-action="Login" class="text-decoration-none">Sign in here</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

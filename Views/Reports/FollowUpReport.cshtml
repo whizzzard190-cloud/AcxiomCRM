@@ -1,0 +1,91 @@
+@model List<AcxiomCRM.Services.FollowUpReportItem>
+@{
+    ViewData["Title"] = "Follow-Up Report";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-calendar-check text-primary me-2"></i>Follow-Up Report</h2>
+        <p class="text-muted small mb-0">Total records: @Model.Count</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="FollowUpReport" asp-route-export="true" 
+           asp-route-status="@ViewBag.Status" asp-route-type="@ViewBag.Type"
+           asp-route-fromDate="@ViewBag.FromDate" asp-route-toDate="@ViewBag.ToDate" 
+           class="btn btn-outline-success">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export to CSV
+        </a>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Reports Home
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-3">
+        <form method="get" asp-action="FollowUpReport" class="row g-2 align-items-end mb-3">
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Status</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">-- All --</option>
+                    <option value="Planned" selected="@(ViewBag.Status == "Planned")">Planned</option>
+                    <option value="Completed" selected="@(ViewBag.Status == "Completed")">Completed</option>
+                    <option value="Cancelled" selected="@(ViewBag.Status == "Cancelled")">Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">Type</label>
+                <select name="type" class="form-select form-select-sm">
+                    <option value="">-- All --</option>
+                    <option value="Call" selected="@(ViewBag.Type == "Call")">Call</option>
+                    <option value="Meeting" selected="@(ViewBag.Type == "Meeting")">Meeting</option>
+                    <option value="Email" selected="@(ViewBag.Type == "Email")">Email</option>
+                    <option value="Task" selected="@(ViewBag.Type == "Task")">Task</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">From</label>
+                <input type="date" name="fromDate" value="@ViewBag.FromDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted mb-1">To</label>
+                <input type="date" name="toDate" value="@ViewBag.ToDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">Filter</button>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Type</th>
+                        <th>Subject</th>
+                        <th>Associated With</th>
+                        <th>Status</th>
+                        <th>Assigned To</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="6" class="text-center py-4 text-muted">No records match the filter criteria.</td></tr>
+                    }
+                    @foreach (var r in Model)
+                    {
+                        <tr>
+                            <td>@r.Date.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td><span class="badge bg-light text-dark border">@r.Type</span></td>
+                            <td class="fw-semibold">@r.Subject</td>
+                            <td>@r.AssociatedWith</td>
+                            <td><span class="badge @(r.Status == "Completed" ? "bg-success" : r.Status == "Overdue" ? "bg-danger" : "bg-warning text-dark")">@r.Status</span></td>
+                            <td>@r.AssignedTo</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

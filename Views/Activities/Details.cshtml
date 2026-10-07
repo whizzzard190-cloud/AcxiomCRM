@@ -1,0 +1,77 @@
+@model AcxiomCRM.Models.Activity
+@{
+    ViewData["Title"] = $"Activity - {Model.Subject}";
+    var iconClass = Model.ActivityType switch {
+        "Call" => "bi-telephone text-success",
+        "Meeting" => "bi-people text-primary",
+        "Email" => "bi-envelope text-info",
+        _ => "bi-check2-square text-secondary"
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <h2 class="fw-bold mb-0">@Model.Subject</h2>
+            <span class="badge bg-light text-dark border">
+                <i class="bi @iconClass me-1"></i> @Model.ActivityType
+            </span>
+            <span class="badge @(Model.Status == "Completed" ? "bg-success" : "bg-warning text-dark")">@Model.Status</span>
+        </div>
+        <p class="text-muted small mb-0">
+            Assigned to: <strong>@(Model.AssignedUser?.FullName ?? "Unassigned")</strong> |
+            Logged: @Model.CreatedDate.ToString("MMM dd, yyyy")
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@Model.ActivityId" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-pencil me-1"></i> Edit
+        </a>
+        <a asp-action="Index" class="btn btn-outline-dark btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-info-circle text-primary me-2"></i>Activity Information</h6>
+            </div>
+            <div class="card-body p-4">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-3">
+                        <small class="text-muted d-block">Occurred On</small>
+                        <span class="fw-semibold fs-5">@Model.ActivityDate.ToString("dddd, MMMM dd, yyyy @ HH:mm")</span>
+                    </li>
+                    <li class="mb-3">
+                        <small class="text-muted d-block">Associated Entity</small>
+                        <div class="d-flex gap-2 flex-wrap mt-1">
+                            @if (Model.Customer != null)
+                            {
+                                <a asp-controller="Customers" asp-action="Details" asp-route-id="@Model.CustomerId" class="badge bg-light text-primary border text-decoration-none p-2">
+                                    <i class="bi bi-building me-1"></i> Customer: @Model.Customer.CustomerName
+                                </a>
+                            }
+                            @if (Model.Lead != null)
+                            {
+                                <a asp-controller="Leads" asp-action="Details" asp-route-id="@Model.LeadId" class="badge bg-light text-info border text-decoration-none p-2">
+                                    <i class="bi bi-funnel me-1"></i> Lead: @Model.Lead.LeadName
+                                </a>
+                            }
+                            @if (Model.Customer == null && Model.Lead == null)
+                            {
+                                <span class="text-muted">General CRM Activity</span>
+                            }
+                        </div>
+                    </li>
+                    <li class="mb-0">
+                        <small class="text-muted d-block">Details & Meeting Notes</small>
+                        <div class="p-3 bg-light rounded mt-1" style="white-space: pre-line;">@(Model.Description ?? "No description recorded.")</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,130 @@
+@model AcxiomCRM.ViewModels.PagedList<AcxiomCRM.Models.Activity>
+@{
+    ViewData["Title"] = "Activities";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-clock-history text-primary me-2"></i>Activities</h2>
+        <p class="text-muted small mb-0">Audit and view customer communications, meetings, calls, and tasks</p>
+    </div>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="bi bi-journal-plus me-1"></i> Log Activity
+    </a>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-3">
+        <div class="row g-2 align-items-center mb-3">
+            <div class="col-md-5">
+                <partial name="_SearchBar" model='(Model.Pager.SearchTerm, "Search activities by subject, description...", "Index", "Activities")' />
+            </div>
+            <div class="col-md-4">
+                <div class="btn-group w-100" role="group">
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm @(string.IsNullOrEmpty(ViewBag.CurrentType) ? "active" : "")">All Types</a>
+                    <a asp-action="Index" asp-route-type="Call" class="btn btn-outline-secondary btn-sm @(ViewBag.CurrentType == "Call" ? "active" : "")">Calls</a>
+                    <a asp-action="Index" asp-route-type="Meeting" class="btn btn-outline-secondary btn-sm @(ViewBag.CurrentType == "Meeting" ? "active" : "")">Meetings</a>
+                    <a asp-action="Index" asp-route-type="Email" class="btn btn-outline-secondary btn-sm @(ViewBag.CurrentType == "Email" ? "active" : "")">Emails</a>
+                    <a asp-action="Index" asp-route-type="Task" class="btn btn-outline-secondary btn-sm @(ViewBag.CurrentType == "Task" ? "active" : "")">Tasks</a>
+                </div>
+            </div>
+            <div class="col-md-3 text-md-end text-muted small">
+                Showing <strong>@Model.Items.Count</strong> of <strong>@Model.Pager.TotalRecords</strong> records
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-muted small">
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Subject</th>
+                        <th>Associated With</th>
+                        <th>Assigned To</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Items.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">
+                                <i class="bi bi-clock-history fs-2 d-block mb-2"></i>
+                                No activities found matching your criteria.
+                            </td>
+                        </tr>
+                    }
+                    @foreach (var item in Model.Items)
+                    {
+                        var iconClass = item.ActivityType switch {
+                            "Call" => "bi-telephone text-success",
+                            "Meeting" => "bi-people text-primary",
+                            "Email" => "bi-envelope text-info",
+                            _ => "bi-check2-square text-secondary"
+                        };
+
+                        <tr>
+                            <td>@item.ActivityDate.ToString("MMM dd, yyyy HH:mm")</td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    <i class="bi @iconClass me-1"></i> @item.ActivityType
+                                </span>
+                            </td>
+                            <td class="fw-semibold">
+                                <a asp-action="Details" asp-route-id="@item.ActivityId" class="text-decoration-none text-dark">
+                                    @item.Subject
+                                </a>
+                                @if (!string.IsNullOrEmpty(item.Description))
+                                {
+                                    <div class="text-muted small text-truncate" style="max-width: 320px;">@item.Description</div>
+                                }
+                            </td>
+                            <td>
+                                @if (item.Customer != null)
+                                {
+                                    <a asp-controller="Customers" asp-action="Details" asp-route-id="@item.CustomerId" class="badge bg-light text-primary border text-decoration-none d-block text-truncate">
+                                        <i class="bi bi-building me-1"></i>@item.Customer.CustomerName
+                                    </a>
+                                }
+                                @if (item.Lead != null)
+                                {
+                                    <a asp-controller="Leads" asp-action="Details" asp-route-id="@item.LeadId" class="badge bg-light text-info border text-decoration-none d-block text-truncate mt-1">
+                                        <i class="bi bi-funnel me-1"></i>@item.Lead.LeadName
+                                    </a>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-secondary border">
+                                    @(item.AssignedUser?.FullName ?? "Unassigned")
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge @(item.Status == "Completed" ? "bg-success" : "bg-warning text-dark")">
+                                    @item.Status
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm">
+                                    <a asp-action="Details" asp-route-id="@item.ActivityId" class="btn btn-outline-secondary" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a asp-action="Edit" asp-route-id="@item.ActivityId" class="btn btn-outline-primary" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger" title="Delete Activity"
+                                            onclick="showDeleteModal('@Url.Action("Delete", "Activities", new { id = item.ActivityId })', 'Are you sure you want to delete activity @item.Subject?', 'Delete')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <partial name="_Pager" model="Model.Pager" />
+    </div>
+</div>

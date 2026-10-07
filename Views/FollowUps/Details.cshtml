@@ -1,0 +1,93 @@
+@model AcxiomCRM.Models.FollowUp
+@{
+    ViewData["Title"] = $"Follow-Up - {Model.Subject}";
+    var statusBadge = Model.Status switch {
+        "Completed" => "bg-success text-white",
+        "Cancelled" => "bg-secondary text-white",
+        _ when Model.IsOverdue => "bg-danger text-white",
+        _ => "bg-warning text-dark"
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <h2 class="fw-bold mb-0">@Model.Subject</h2>
+            <span class="badge @statusBadge">@(Model.IsOverdue ? "Overdue" : Model.Status)</span>
+            <span class="badge bg-light text-dark border">@Model.FollowUpType</span>
+        </div>
+        <p class="text-muted small mb-0">
+            Assigned to: <strong>@(Model.AssignedUser?.FullName ?? "Unassigned")</strong> |
+            Created: @Model.CreatedDate.ToString("MMM dd, yyyy")
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        @if (Model.Status == "Planned")
+        {
+            <form asp-action="Complete" asp-route-id="@Model.FollowUpId" method="post" class="d-inline">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-success btn-sm">
+                    <i class="bi bi-check2-circle me-1"></i> Mark Completed
+                </button>
+            </form>
+            <a asp-action="Reschedule" asp-route-id="@Model.FollowUpId" class="btn btn-warning btn-sm">
+                <i class="bi bi-clock-history me-1"></i> Reschedule
+            </a>
+        }
+        <a asp-action="Index" class="btn btn-outline-dark btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-info-circle text-primary me-2"></i>Follow-Up Details</h6>
+            </div>
+            <div class="card-body p-4">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-3">
+                        <small class="text-muted d-block">Scheduled Date</small>
+                        <span class="fw-semibold fs-5">@Model.FollowUpDate.ToString("dddd, MMMM dd, yyyy @ HH:mm")</span>
+                    </li>
+                    @if (Model.CompletedDate.HasValue)
+                    {
+                        <li class="mb-3">
+                            <small class="text-muted d-block">Completed On</small>
+                            <span class="text-success fw-semibold">@Model.CompletedDate.Value.ToString("g")</span>
+                        </li>
+                    }
+                    <li class="mb-3">
+                        <small class="text-muted d-block">Associated Records</small>
+                        <div class="d-flex gap-2 flex-wrap mt-1">
+                            @if (Model.Customer != null)
+                            {
+                                <a asp-controller="Customers" asp-action="Details" asp-route-id="@Model.CustomerId" class="badge bg-light text-primary border text-decoration-none p-2">
+                                    <i class="bi bi-building me-1"></i> Customer: @Model.Customer.CustomerName
+                                </a>
+                            }
+                            @if (Model.Lead != null)
+                            {
+                                <a asp-controller="Leads" asp-action="Details" asp-route-id="@Model.LeadId" class="badge bg-light text-info border text-decoration-none p-2">
+                                    <i class="bi bi-funnel me-1"></i> Lead: @Model.Lead.LeadName
+                                </a>
+                            }
+                            @if (Model.Opportunity != null)
+                            {
+                                <a asp-controller="Opportunities" asp-action="Details" asp-route-id="@Model.OpportunityId" class="badge bg-light text-success border text-decoration-none p-2">
+                                    <i class="bi bi-briefcase me-1"></i> Opportunity: @Model.Opportunity.OpportunityName
+                                </a>
+                            }
+                        </div>
+                    </li>
+                    <li class="mb-0">
+                        <small class="text-muted d-block">Remarks & History</small>
+                        <div class="p-3 bg-light rounded mt-1" style="white-space: pre-line;">@(Model.Remarks ?? "No remarks recorded.")</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

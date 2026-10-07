@@ -1,0 +1,73 @@
+@model AcxiomCRM.ViewModels.CreateUserViewModel
+@{
+    ViewData["Title"] = "Add User";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-person-plus text-primary me-2"></i>Create New User</h5>
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i> Back to List
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <partial name="_ValidationSummary" />
+
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <div class="mb-3">
+                        <label asp-for="FullName" class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+                        <input asp-for="FullName" class="form-control" placeholder="e.g. Rachel Adams" autofocus />
+                        <span asp-validation-for="FullName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label fw-semibold">Work Email <span class="text-danger">*</span></label>
+                        <input asp-for="Email" class="form-control" placeholder="rachel@acxiomcrm.com" />
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label fw-semibold">Initial Password <span class="text-danger">*</span></label>
+                        <input asp-for="Password" class="form-control" placeholder="Min. 8 characters with upper, lower, digit, symbol" />
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Role" class="form-label fw-semibold">Assigned Role <span class="text-danger">*</span></label>
+                        <select asp-for="Role" class="form-select">
+                            <option value="SalesExecutive">Sales Executive</option>
+                            <option value="Manager">Manager</option>
+                            <option value="Admin">Administrator</option>
+                        </select>
+                        <span asp-validation-for="Role" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="ManagerId" class="form-label fw-semibold">Reporting Manager</label>
+                        <select asp-for="ManagerId" class="form-select" asp-items="ViewBag.Managers">
+                            <option value="">-- None (Top Level) --</option>
+                        </select>
+                        <span asp-validation-for="ManagerId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-save me-1"></i> Create User
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

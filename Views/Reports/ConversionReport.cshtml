@@ -1,0 +1,59 @@
+@model List<AcxiomCRM.Services.ConversionReportItem>
+@{
+    ViewData["Title"] = "Sales Conversion Report";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-trophy text-primary me-2"></i>Sales & Conversion Report</h2>
+        <p class="text-muted small mb-0">Total converted leads: @Model.Count</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="ConversionReport" asp-route-export="true" 
+           asp-route-fromDate="@ViewBag.FromDate" asp-route-toDate="@ViewBag.ToDate" 
+           class="btn btn-outline-success">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export to CSV
+        </a>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Reports Home
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light">
+                    <tr>
+                        <th>Lead Code</th>
+                        <th>Lead Name</th>
+                        <th>Created Customer</th>
+                        <th>Created Opportunity</th>
+                        <th>Deal Amount</th>
+                        <th>Converted Date</th>
+                        <th>Converted By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="7" class="text-center py-4 text-muted">No converted leads recorded yet.</td></tr>
+                    }
+                    @foreach (var r in Model)
+                    {
+                        <tr>
+                            <td><span class="badge bg-light text-dark border">@r.LeadCode</span></td>
+                            <td class="fw-semibold">@r.LeadName</td>
+                            <td><strong class="text-primary">@r.CustomerName</strong></td>
+                            <td>@(r.OpportunityName ?? "-")</td>
+                            <td class="fw-bold">@(r.OpportunityAmount.HasValue ? r.OpportunityAmount.Value.ToString("C0") : "-")</td>
+                            <td>@r.ConvertedDate.ToString("yyyy-MM-dd")</td>
+                            <td>@r.ConvertedBy</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

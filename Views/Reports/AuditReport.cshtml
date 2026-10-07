@@ -1,0 +1,78 @@
+@model List<AcxiomCRM.Services.AuditReportItem>
+@{
+    ViewData["Title"] = "Compliance Audit Report";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1 text-danger"><i class="bi bi-shield-shaded me-2"></i>Compliance Audit Report</h2>
+        <p class="text-muted small mb-0">Total audit entries: @Model.Count</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="AuditReport" asp-route-export="true" 
+           asp-route-module="@ViewBag.Module"
+           asp-route-fromDate="@ViewBag.FromDate" asp-route-toDate="@ViewBag.ToDate" 
+           class="btn btn-outline-danger">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export to CSV
+        </a>
+        <a asp-action="Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Reports Home
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4 border-top border-4 border-danger">
+    <div class="card-body p-3">
+        <form method="get" asp-action="AuditReport" class="row g-2 align-items-end mb-3">
+            <div class="col-md-4">
+                <label class="form-label small text-muted mb-1">Module</label>
+                <input type="text" name="module" value="@ViewBag.Module" class="form-control form-control-sm" placeholder="Auth, Customer, Lead..." />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">From Date</label>
+                <input type="date" name="fromDate" value="@ViewBag.FromDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted mb-1">To Date</label>
+                <input type="date" name="toDate" value="@ViewBag.ToDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-danger btn-sm w-100">Filter</button>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light">
+                    <tr>
+                        <th>Timestamp (UTC)</th>
+                        <th>User</th>
+                        <th>Module</th>
+                        <th>Action</th>
+                        <th>Record ID</th>
+                        <th>Result</th>
+                        <th>IP Address</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="7" class="text-center py-4 text-muted">No audit entries match filter criteria.</td></tr>
+                    }
+                    @foreach (var a in Model)
+                    {
+                        <tr>
+                            <td>@a.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            <td class="fw-semibold">@a.User</td>
+                            <td><span class="badge bg-light text-dark border">@a.Module</span></td>
+                            <td><span class="badge bg-secondary text-white">@a.Action</span></td>
+                            <td>@(a.RecordId ?? "-")</td>
+                            <td><span class="badge @(a.Result == "Success" ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger")">@a.Result</span></td>
+                            <td class="font-monospace text-muted">@(a.IpAddress ?? "-")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

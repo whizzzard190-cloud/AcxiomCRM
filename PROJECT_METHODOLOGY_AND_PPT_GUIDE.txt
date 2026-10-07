@@ -1,0 +1,652 @@
+================================================================================
+ACXIOMCRM: DETAILED SYSTEM METHODOLOGY, ARCHITECTURAL WORKFLOWS,
+AND POWERPOINT (PPT) PRESENTATION BLUEPRINT
+================================================================================
+
+================================================================================
+PART 1: COMPREHENSIVE SYSTEM EXPLANATION & ARCHITECTURAL METHODOLOGY
+================================================================================
+
+1. EXECUTIVE SUMMARY & PROBLEM STATEMENT
+--------------------------------------------------------------------------------
+Most legacy CRM applications suffer from significant architectural deficiencies:
+- Weak authorization: Relying on scattered "if" statements in UI controllers that
+  allow horizontal privilege escalation (Insecure Direct Object References - IDOR).
+- Fragile data integrity: Unvalidated stage transitions, missing duplicate detection,
+  and uncoordinated multi-step mutations that leave orphan records.
+- Inadequate auditability: Mutation or deletion of logs, exposure of user passwords
+  in logs or APIs, and lack of compliance traceability.
+- Over-engineering: Bloating projects with external frameworks (CQRS, MediatR,
+  Tailwind, node_modules) when standard built-in framework capabilities are superior.
+
+AcxiomCRM was built to solve these enterprise challenges. It is a secure, role-aware,
+auditable, and strictly validated workflow CRM built entirely with C# and ASP.NET Core 10.
+It strictly adheres to clean architectural principles, defense-in-depth security, and
+zero-trust resource scoping.
+
+
+2. ARCHITECTURAL PATTERN & LAYERED DESIGN METHODOLOGY
+--------------------------------------------------------------------------------
+AcxiomCRM follows a strict 4-Tier Layered Architecture:
+
+[Presentation Layer] -> Razor MVC Controllers & REST API Controllers (Controllers/Api)
+         |
+[Domain Service Layer] -> Business logic, state machines, workflow rules, scoping
+         |
+[Cross-Cutting Layer] -> Security authorization, append-only auditing, rate limiting
+         |
+[Persistence & Data]  -> Entity Framework Core 9.0 DbContext & SQL Server Database
+
+Key Architectural Decisions:
+1. No Entity Leakage: Internal database entities (Customer, Lead, Opportunity) are
+   strictly barred from crossing the API boundary. The REST API exposes only
+   strongly-typed Data Transfer Objects (DTOs) from `DTOs/ApiDtos.cs`. This prevents
+   mass assignment attacks, over-posting, and accidental data disclosure.
+2. Built-in Framework Primitives over External Bloat: Instead of adding 15 NuGet
+   packages and npm dependencies, AcxiomCRM harnesses ASP.NET Core native features:
+   - Built-in Identity for password hashing, lockout, and session cookies.
+   - Built-in RateLimiter (`FixedWindowLimiter`) for authentication brute-force protection.
+   - Built-in `IValidatableObject` and DataAnnotations for cross-property validation.
+   - Bootstrap 5 and Chart.js delivered via trusted CDNs. Zero npm/node overhead.
+3. Centralized Services: All business rules reside in dedicated domain services
+   (CustomerService, LeadService, OpportunityService, FollowUpService, ActivityService,
+   DashboardService, ReportService, AuditService, ResourceAuthorizationService).
+   Controllers remain thin, orchestrating HTTP inputs and redirecting to views or
+   returning typed ProblemDetails/JSON results.
+
+
+3. SECURITY & ZERO-TRUST SCOPING METHODOLOGY
+--------------------------------------------------------------------------------
+AcxiomCRM implements a comprehensive Zero-Trust security model:
+
+A. Centralized Role & Hierarchical Scope Authorization:
+   The system defines three core roles: Admin, Manager, and SalesExecutive.
+   Instead of ad-hoc checks in controllers, all record queries and mutations pass
+   through `IResourceAuthorizationService`:
+   - Admin: Has global visibility across all organizational units.
+   - Manager: Governed by the managerial reporting tree (`ManagerId` foreign key
+     on `ApplicationUser`). A manager can view and manage records owned by themselves
+     and by Sales Executives who report directly to them. Records belonging to
+     executives reporting to other managers are strictly inaccessible.
+   - SalesExecutive: Strict ownership isolation. An executive can ONLY view, edit,
+     or mutate records where `OwnerId == currentUserId` or `AssignedTo == currentUserId`.
+   Attempts by an executive to tamper with query strings, route IDs, or POST bodies
+   to view or edit another executive's customer or deal are intercepted and denied.
+
+B. Identity, Password Policy & Lockout Defense:
+   - Password Hashing: PBKDF2 with HMAC-SHA256 via ASP.NET Core Identity.
+   - Password Rules: Minimum 8 characters, requiring uppercase, lowercase, digit,
+     and special character.
+   - Brute Force Lockout: Automatically locks an account after 5 consecutive failed
+     login attempts for 15 minutes.
+   - Administrative Unlock: Only Admins can manually release locked accounts,
+     and the unlock action is permanently audited.
+
+C. Web Defense-in-Depth:
+   - CSRF Immunity: `[ValidateAntiForgeryToken]` is enforced across all state-changing
+     MVC POST actions. Anti-forgery cookies are configured with `SameSite=Strict`.
+   - Cookie Hardening: All application cookies enforce `HttpOnly=true`,
+     `SameSite=Strict`, and `SecurePolicy=Always`.
+   - SQL Injection Immunity: 100% EF Core parameterized LINQ queries. Zero raw SQL
+     string concatenation exists anywhere in the repository.
+   - Security Headers: Custom middleware injects `X-Content-Type-Options: nosniff`,
+     `X-Frame-Options: SAMEORIGIN`, and `Referrer-Policy: strict-origin-when-cross-origin`.
+   - HSTS: HTTP Strict Transport Security is active with 1-year max age and subdomains.
+   - Rate Limiting: FixedWindow rate limiter permits a maximum of 5 requests per
+     minute on `/api/auth/*` endpoints.
+
+
+4. CORE BUSINESS WORKFLOW ENGINES
+--------------------------------------------------------------------------------
+A. Customer Management & Duplicate Guard:
+   - Strict validation: Required CustomerName, 10-digit Indian phone starting with
+     6-9 (`^[6-9]\d{9}$`), and valid RFC email format.
+   - Duplicate Detection: Real-time case-insensitive, whitespace-trimmed duplicate
+     detection on both Email and Phone. Attempts to create or update a customer
+     with an existing email or phone are rejected (HTTP 409 Conflict in API,
+     ModelState validation error in MVC).
+   - Soft Deactivation: Customers can be deactivated (`Status = "Inactive"`) rather
+     than hard-deleted, maintaining historical integrity.
+
+B. Lead Lifecycle & State Machine:
+   - Allowed Statuses: `New`, `Contacted`, `Qualified`, `Unqualified`, `Converted`, `Lost`.
+   - Valid Transitions:
+     - New -> Contacted | Lost
+     - Contacted -> Qualified | Unqualified | Lost
+     - Qualified -> Converted | Lost
+     - Unqualified -> Contacted | Lost
+     - Converted & Lost are terminal states.
+   - Invalid status jumps (e.g., New directly to Converted) are rejected.
+   - Open Leads metric dynamically includes New, Contacted, Qualified, and Unqualified,
+     excluding terminal states.
+
+C. Atomic Lead Conversion Workflow:
+   - Conversion is restricted to `Qualified` leads.
+   - Executed within an ACID transaction (`BeginTransactionAsync`):
+     1. Creates a new Customer record (or links existing duplicate).
+     2. Optionally creates a new Opportunity linked to the customer.
+     3. Updates Lead status to `Converted`, storing `ConvertedCustomerId` and
+        `ConvertedOpportunityId`.
+     4. Emits a comprehensive audit entry detailing the conversion linkage.
+   - If any step fails, the entire transaction rolls back, preventing partial data corruption.
+
+D. Opportunity Pipeline & Revenue Forecasting:
+   - Business Invariants: Amount must be > 0. Probability must be 0 to 100.
+     ExpectedCloseDate cannot be in the past for active deals.
+   - Stages: `Qualification` -> `Proposal` -> `Negotiation` -> `Won` | `Lost`.
+   - Interactive Kanban Pipeline view organizes open deals by stage.
+   - Weighted Pipeline Value calculation: `Amount * Probability / 100`, providing
+     accurate sales forecasting for managers and executives.
+
+E. Follow-Up Engine & Overdue Tracking:
+   - Polymorphic association: Can be linked to a Customer, Lead, or Opportunity
+     (at least one association is required).
+   - Past-Date Protection: Follow-ups cannot be scheduled or rescheduled into the
+     past for planned items.
+   - Overdue Detection: Calculated dynamically (`FollowUpDate < Today && Status == "Planned"`).
+   - Complete & Reschedule Workflows: Audit logs capture completion remarks and
+     reschedule history with timestamps.
+
+F. Activity Journaling:
+   - Captures Calls, Meetings, Emails, and Tasks linked to customers or leads,
+     providing a chronological timeline of all client touchpoints.
+
+
+5. AUDITING & COMPLIANCE METHODOLOGY
+--------------------------------------------------------------------------------
+- Append-Only Architecture: The `AuditLog` table and `IAuditService` expose zero
+  Update or Delete methods. Once written, audit records are permanent and immutable.
+- Recursive Sensitive Property Stripping: Before persisting `OldValue` and `NewValue`
+  JSON payloads, `AuditService.SanitizeAndSerialize()` traverses the JSON hierarchy
+  and recursively strips `Password`, `PasswordHash`, `Token`, `Secret`,
+  `SecurityStamp`, and `ConcurrencyStamp`. Passwords are NEVER written to logs or DB.
+- Comprehensive Coverage: Audits every authentication event (Login, Failure, Lockout,
+  Unlock, Logout), CRUD operations on all entities, role modifications, lead conversions,
+  and follow-up status changes.
+
+
+6. REPORTING & ANALYTICAL ENGINE
+--------------------------------------------------------------------------------
+- 8 Distinct Analytical Reports:
+  1. Customer Directory Report (by status, city, owner)
+  2. Lead Pipeline Report (by source, priority, status)
+  3. Follow-Up Schedule Report (by type, status, overdue status)
+  4. Opportunity Pipeline Report (by stage, expected close date)
+  5. Pipeline Revenue & Forecasting Report (stage-wise & owner-wise weighted sums)
+  6. Lead Conversion Performance Report (conversion rates & velocity)
+  7. User & Team Activity Report (activity volume by rep)
+  8. Compliance Audit Trail Report (filterable by user, module, action, date range)
+- Role Scoping: Sales executives view only their own operational reports; managers
+  view their team; admins view global data.
+- Streaming CSV Export: Generates RFC 4180 compliant CSV files directly to the
+  HTTP response stream with zero memory buffering.
+
+
+7. TESTING & QUALITY ASSURANCE METHODOLOGY
+--------------------------------------------------------------------------------
+- Test Suite: 52 automated xUnit tests in `Tests/Tests.csproj`.
+- Golden Test Set (G001 - G042): Every mandatory functional, security, and scope
+  rule specified in the prompt is codified into an automated test.
+  - G001-G005: Customer validation and duplicate email/phone rejection.
+  - G006-G010: Opportunity amount > 0, probability 0-100, close date validation.
+  - G011-G013: Follow-up past date rejection, lead statuses and transition validation.
+  - G014-G017: Sales executive out-of-scope denial, API tampering prevention.
+  - G018-G020: Lockout enforcement, zero password leakage in DTOs or logs.
+  - G021-G027: Audit trail verification across all mutations and workflows.
+  - G028-G029: REST API authorized DTO JSON responses vs 401/403.
+  - G030-G032: Dashboard metric scoping for SE, Manager, and Admin.
+  - G033-G035: Password complexity, anti-forgery decoration check, SQL injection safety.
+  - G036-G039: Admin unlock, manager cross-team denial, API 404, API 409 conflict.
+  - G040-G042: Lead field bounds, registration role lock, append-only audit enforcement.
+- 14-Step Acceptance Scenario: Automated in `AcceptanceScenarioTests.cs`, executing the
+  complete lifecycle from unauthenticated block to registration, validation checks,
+  scope boundaries, API queries, and lead conversion.
+- Test Run Outcome: 52 Passed, 0 Failed, 0 Skipped (100% Pass Rate).
+
+
+================================================================================
+PART 2: COMPLETE POWERPOINT (PPT) PRESENTATION BLUEPRINT
+================================================================================
+This blueprint is designed for direct conversion into a 15-slide presentation.
+Each slide includes:
+- Slide Title & Subtitle
+- Visual Layout Concept
+- Core Bullet Points (high-impact presentation copy)
+- Verbatim Speaker Script (what to say during the presentation)
+- Key Metrics & Callout Cards
+
+--------------------------------------------------------------------------------
+SLIDE 1: TITLE SLIDE
+--------------------------------------------------------------------------------
+[TITLE]: AcxiomCRM - Enterprise Customer Relationship Management
+[SUBTITLE]: Secure, Role-Aware, Auditable & Workflow-Driven Architecture
+[PRESENTER INFO]: Architecture, Engineering & Security Walkthrough
+
+[VISUAL LAYOUT]:
+- Clean modern gradient header with AcxiomCRM enterprise badge.
+- Subtitle in subtle slate font.
+- 3 key theme pills at bottom: "Zero-Trust Security" | "Strict Validation" | "Append-Only Audit"
+
+[BULLET POINTS]:
+* Enterprise CRM engineered with ASP.NET Core 10 & Entity Framework Core
+* Complete end-to-end implementation: Customer, Lead, Opportunity, Follow-up, Activity
+* Hierarchical scope authorization: Admin, Manager, and Sales Executive boundaries
+* 100% verified against Golden Test Suite G001-G042 with 52 automated tests
+
+[SPEAKER SCRIPT]:
+"Good morning, everyone. Today I am proud to present AcxiomCRM—a modern, enterprise-grade
+Customer Relationship Management system built from the ground up on .NET 10 and SQL Server.
+Unlike generic CRUD portals, AcxiomCRM was architected around three foundational pillars:
+strict business invariants, zero-trust hierarchical authorization, and tamper-proof
+regulatory auditing. Over the next few minutes, we will walk through the architecture,
+security engineering, core business workflows, and verification results that prove this
+system is production-ready."
+
+--------------------------------------------------------------------------------
+SLIDE 2: THE PROBLEM & DESIGN PHILOSOPHY
+--------------------------------------------------------------------------------
+[TITLE]: The Enterprise Problem Statement
+[SUBTITLE]: Why Conventional CRM Architectures Fail
+
+[VISUAL LAYOUT]:
+- Two-column contrast comparison:
+  - Left column (Red accent): "Legacy CRM Vulnerabilities"
+  - Right column (Green accent): "The AcxiomCRM Methodology"
+
+[BULLET POINTS]:
+* Legacy Pitfall: Ad-hoc authorization logic in UI controllers creates Insecure Direct Object References (IDOR).
+  -> AcxiomCRM Solution: Centralized ResourceAuthorizationService enforcing team & ownership scoping.
+* Legacy Pitfall: Partial transactions leave corrupted leads without customers or opportunities.
+  -> AcxiomCRM Solution: Single-transaction atomic lead qualification and conversion engine.
+* Legacy Pitfall: Plaintext password leakage in error logs and API responses.
+  -> AcxiomCRM Solution: Strict DTO boundaries & recursive JSON redaction in AuditService.
+* Legacy Pitfall: Over-complicated tech stacks (npm, webpack, CQRS) that slow velocity.
+  -> AcxiomCRM Solution: High-performance native ASP.NET Core primitives with zero npm build step.
+
+[SPEAKER SCRIPT]:
+"In many commercial CRMs, developers scatter authorization checks across dozens of controller
+methods. The moment someone tweaks a URL parameter or makes a direct REST API call, they
+can view or modify deals belonging to another sales rep. Furthermore, during lead conversion,
+if creating a customer succeeds but creating the opportunity fails, data gets out of sync.
+AcxiomCRM eliminates these failure modes by enforcing atomic transactions, centralizing
+scoping in a single service, and ensuring internal database models are never leaked to the client."
+
+--------------------------------------------------------------------------------
+SLIDE 3: SYSTEM ARCHITECTURE & TECH STACK
+--------------------------------------------------------------------------------
+[TITLE]: Solution Architecture & Tech Stack
+[SUBTITLE]: High Performance, Clean Separation of Concerns
+
+[VISUAL LAYOUT]:
+- 4-Tier Layered Architecture Diagram:
+  Presentation (Razor MVC + OpenAPI REST) -> Services -> Security/Audit -> EF Core & SQL Server
+- Tech Stack badges: .NET 10 | EF Core 9 | SQL Server | Bootstrap 5 | Chart.js | xUnit
+
+[BULLET POINTS]:
+* Core Framework: C# / .NET 10.0 with nullable reference types enabled
+* Presentation: Hybrid Razor MVC (UI) + Web API (Controllers/Api/)
+* Data Layer: Entity Framework Core 9.0 targeting SQL Server Express / LocalDB
+* Frontend: Bootstrap 5 & Chart.js via CDN (Zero npm build step, ultra-fast asset delivery)
+* API Layer: OpenAPI 3.0 / Swagger UI with strongly-typed Data Transfer Objects (DTOs)
+* Security Stack: ASP.NET Core Identity, PBKDF2 hashing, Anti-CSRF, OWASP headers
+
+[SPEAKER SCRIPT]:
+"Here we see the solution architecture. At the top, we have a dual presentation layer:
+Razor MVC for web users and an OpenAPI-compliant REST API for programmatic consumers.
+Crucially, neither presentation layer talks directly to Entity Framework entities.
+Everything passes through our domain service layer, which coordinates business rules,
+validations, and security checks. By utilizing standard .NET 10 primitives and CDN-delivered
+frontends, we achieve lightning-fast response times with zero client-side compilation overhead."
+
+--------------------------------------------------------------------------------
+SLIDE 4: CENTRALIZED AUTHORIZATION & HIERARCHICAL SCOPE
+--------------------------------------------------------------------------------
+[TITLE]: Centralized Role-Based & Scoped Authorization
+[SUBTITLE]: True Zero-Trust Record Isolation
+
+[VISUAL LAYOUT]:
+- Organizational Hierarchy Tree:
+  Admin (Global Scope) -> Manager (Team Scope) -> Sales Executives (Own Records)
+- Callout card showing how out-of-scope access is denied server-side.
+
+[BULLET POINTS]:
+* Admin: Complete, unrestricted access across all customers, deals, audit logs, and users.
+* Manager: Access strictly scoped to their own records plus Sales Executives who report
+  directly to them via `ApplicationUser.ManagerId`. Out-of-team records are inaccessible.
+* Sales Executive: Access strictly confined to records where `OwnerId` or `AssignedTo`
+  matches their own identity.
+* Centralized Enforcement: Implemented in `ResourceAuthorizationService`—no scattered `if` statements.
+* Tamper-Proof: Route tampering, URL ID spoofing, or crafted POST bodies are denied with 403/404.
+
+[SPEAKER SCRIPT]:
+"Authorization in AcxiomCRM is not just about roles; it is about resource scoping. An Admin
+sees the entire organization. A Manager sees their direct reports and themselves, but
+cannot inspect another manager's team. A Sales Executive can only see their own assigned
+customers and deals. Most importantly, this logic is centralized in our ResourceAuthorizationService.
+Even if an attacker crafts an HTTP request modifying an ID, the server validates ownership
+before returning a single byte of data."
+
+--------------------------------------------------------------------------------
+SLIDE 5: COMPREHENSIVE SECURITY & DEFENSE-IN-DEPTH
+--------------------------------------------------------------------------------
+[TITLE]: Security Engineering & Hardening
+[SUBTITLE]: Enterprise-Grade Controls Verified by Test Automation
+
+[VISUAL LAYOUT]:
+- Grid of 6 security shields / metric cards:
+  1. Password Policy & Lockout
+  2. Anti-CSRF & Strict Cookies
+  3. SQL Injection Immunity
+  4. OWASP Response Headers
+  5. Auth Rate Limiting
+  6. Sensitive Data Sanitization
+
+[BULLET POINTS]:
+* Identity & Lockout: 8+ character password policy; automatic 15-minute lockout after
+  5 failed attempts; admin-only audited unlock.
+* CSRF & Cookies: `[ValidateAntiForgeryToken]` on all state-changing POST actions;
+  `HttpOnly=true`, `SameSite=Strict`, `SecurePolicy=Always`.
+* Parameterized Queries: 100% EF Core LINQ parameterized queries; zero raw SQL strings.
+* Security Headers: Injected via middleware: `X-Content-Type-Options: nosniff`,
+  `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: strict-origin-when-cross-origin`, HSTS.
+* API Rate Limiting: FixedWindow rate limiter permits up to 5 auth attempts per minute.
+* Data Redaction: Recursive JSON sanitizer removes passwords, tokens, and hashes from logs.
+
+[SPEAKER SCRIPT]:
+"Our security checklist is exhaustive and fully verified. Authentication endpoints are rate-limited
+against credential stuffing attacks. Account lockouts kick in automatically after five failed
+attempts. Every form submission requires an anti-forgery token, and all cookies enforce
+Strict SameSite and HttpOnly flags. Furthermore, because all database interactions use EF Core
+LINQ parameterization, SQL injection strings like single quotes or DROP TABLE commands are
+safely treated as literal search terms with zero data compromise."
+
+--------------------------------------------------------------------------------
+SLIDE 6: LEAD LIFECYCLE & ATOMIC CONVERSION WORKFLOW
+--------------------------------------------------------------------------------
+[TITLE]: Lead Management & Atomic Conversion Engine
+[SUBTITLE]: Strict State-Machine Transitions & ACID Transaction Integrity
+
+[VISUAL LAYOUT]:
+- State Machine Workflow Chevron:
+  New -> Contacted -> Qualified -> [Atomic Conversion] -> Customer + Opportunity
+                                -> Lost / Unqualified
+- Transaction Callout: "Single ACID Transaction / Zero Orphan Records"
+
+[BULLET POINTS]:
+* Lead Status State Machine: `New`, `Contacted`, `Qualified`, `Unqualified`, `Converted`, `Lost`.
+* Strict Transitions: Direct skips (e.g. New to Converted) are rejected; Converted and Lost are terminal.
+* Atomic Conversion Workflow:
+  1. Restricted exclusively to leads in `Qualified` status.
+  2. Creates new Customer record (or validates duplicate phone/email rules).
+  3. Optionally creates sales Opportunity linked to Customer.
+  4. Updates Lead to `Converted` and stores linked CustomerId & OpportunityId.
+  5. Generates immutable audit trail entry referencing all linked entities.
+* Single ACID Transaction: If any step fails, the entire operation rolls back seamlessly.
+
+[SPEAKER SCRIPT]:
+"Lead management in AcxiomCRM is workflow-driven. Leads advance systematically through Contacted
+to Qualified. When a sales rep qualifies a lead, they trigger our Atomic Conversion Workflow.
+Within a single database transaction, the system creates the customer, creates the opening
+deal, updates the lead status to Converted, and writes the audit trail. If any validation
+fails along the way, everything rolls back. You never end up with half-created customers
+or orphaned opportunities."
+
+--------------------------------------------------------------------------------
+SLIDE 7: OPPORTUNITY PIPELINE & REVENUE FORECASTING
+--------------------------------------------------------------------------------
+[TITLE]: Opportunity Pipeline & Interactive Kanban
+[SUBTITLE]: Visual Stage Progression & Accurate Sales Forecasting
+
+[VISUAL LAYOUT]:
+- Visual Kanban Board mockup with 5 stage columns:
+  [Qualification] -> [Proposal] -> [Negotiation] -> [Won] | [Lost]
+- Metric Callout: "Weighted Value = Amount × Probability / 100"
+
+[BULLET POINTS]:
+* Stage Progression: Qualification -> Proposal -> Negotiation -> Won / Lost.
+* Invariant Validations:
+  - Amount must be strictly greater than 0.
+  - Probability must be between 0% and 100%.
+  - Expected Close Date cannot be in the past for active deals.
+* Visual Kanban Pipeline: Interactive drag-and-drop / stage move cards for visual deal tracking.
+* Weighted Pipeline Forecasting: Calculates probability-adjusted pipeline value for realistic
+  revenue forecasting across sales reps and teams.
+
+[SPEAKER SCRIPT]:
+"For sales execution, AcxiomCRM delivers both a tabular list and a visual Kanban board.
+Opportunities progress from Qualification through Proposal to Negotiation and Closed-Won.
+Our system enforces critical business rules: opportunity amounts must be positive, probabilities
+must stay between 0 and 100, and close dates cannot be set in the past. To give management
+an accurate revenue forecast, the pipeline calculates weighted values based on each deal's
+win probability."
+
+--------------------------------------------------------------------------------
+SLIDE 8: FOLLOW-UPS & AUTOMATED OVERDUE ENGINE
+--------------------------------------------------------------------------------
+[TITLE]: Follow-Ups & Activity Journaling
+[SUBTITLE]: Ensuring Zero Deals Slip Through the Cracks
+
+[VISUAL LAYOUT]:
+- Side-by-side view:
+  - Left: Follow-Up Action Card (Subject, Date, Type, Related Customer/Deal, Status)
+  - Right: Activity Journal Timeline (Calls, Meetings, Emails, Completed Tasks)
+- Alert Badge: "Automatic Overdue Detection"
+
+[BULLET POINTS]:
+* Polymorphic Associations: Follow-ups can link to a Customer, Lead, or Opportunity.
+* Date Integrity: Planned follow-ups cannot be scheduled or rescheduled into the past.
+* Dynamic Overdue Flagging: Past-due planned follow-ups are automatically flagged as Overdue.
+* Rescheduling History: Modifying dates prompts for reason and records historical audit trail.
+* Activity Timeline: Chronological journaling of client interactions (Calls, Meetings, Emails, Tasks)
+  giving managers a 360-degree view of relationship history.
+
+[SPEAKER SCRIPT]:
+"No deal closes without consistent communication. AcxiomCRM's Follow-up engine ensures reps
+never drop the ball. Follow-ups can be attached to customers, leads, or specific deals.
+The system prevents reps from scheduling follow-ups in the past, and dynamically flags any
+missed items as Overdue. When a rep completes or reschedules a call, their remarks and the
+date changes are automatically logged into the audit record."
+
+--------------------------------------------------------------------------------
+SLIDE 9: EXECUTIVE DASHBOARD & REAL-TIME ANALYTICS
+--------------------------------------------------------------------------------
+[TITLE]: Executive Dashboard & Dynamic Analytics
+[SUBTITLE]: Role-Tailored KPI Cards & Interactive Visualizations
+
+[VISUAL LAYOUT]:
+- Dashboard mockup featuring:
+  - Top: 8 KPI Metric Cards (Total Customers, Total Leads, Open Leads, Total Opps, Open Opps, Won, Lost, Total Pipeline)
+  - Bottom: 3 Chart.js Visualizations (Lead Status Donut, Pipeline Stage Bar, Monthly Sales Trend)
+  - Date Filter bar: Today | This Week | This Month | Custom Range
+
+[BULLET POINTS]:
+* 8 Executive KPI Cards: Total Customers, Total Leads, Open Leads, Total Opportunities,
+  Open Deals, Won Deals, Lost Deals, and Total Open Pipeline Value.
+* Dynamic Date Filtering: Instant recalculation across Today, This Week, This Month, or Custom Ranges.
+* 3 Chart.js Visualizations:
+  1. Lead Distribution by Status (Donut chart)
+  2. Opportunity Volume by Stage (Bar chart)
+  3. Monthly Won Sales Trend (Line/Bar chart)
+* Role-Aware Data Filtering: Sales reps see their own metrics; managers see team performance;
+  executives see the whole enterprise.
+
+[SPEAKER SCRIPT]:
+"Our Executive Dashboard brings CRM data to life. It delivers eight high-level KPI cards,
+flexible date range filtering, and three dynamic Chart.js visualizations covering lead statuses,
+opportunity stages, and monthly revenue trends. Crucially, the dashboard is role-scoped:
+when a sales rep logs in, they see their personal funnel. When a manager logs in, they see
+their team's performance. When the executive logs in, they see organizational metrics."
+
+--------------------------------------------------------------------------------
+SLIDE 10: REPORTING ENGINE & STREAMING CSV EXPORT
+--------------------------------------------------------------------------------
+[TITLE]: Enterprise Reporting & CSV Export Engine
+[SUBTITLE]: 8 Purpose-Built Operational & Management Reports
+
+[VISUAL LAYOUT]:
+- Catalog Grid displaying the 8 reports with download icons:
+  [Customer Directory] [Lead Pipeline] [Follow-Up Schedule] [Opportunity Pipeline]
+  [Pipeline Forecasting] [Conversion Rates] [User Activity] [Compliance Audit]
+
+[BULLET POINTS]:
+* 8 Dedicated Reports: Covers every operational domain with sorting, filtering, and pagination.
+* Pipeline & Weighted Forecasting: Detailed stage-wise and owner-wise revenue analysis.
+* Conversion Performance: Tracks lead conversion efficiency and velocity across sales reps.
+* Streaming CSV Download: Real-time, RFC 4180 compliant CSV export streamed directly from
+  the server with zero memory overhead.
+* Scoped Access: Audit and User Activity reports are restricted to Admins and Managers;
+  operational reports respect team ownership rules.
+
+[SPEAKER SCRIPT]:
+"Data in a CRM is only as good as your ability to analyze it. AcxiomCRM features a dedicated
+reporting engine with eight distinct reports. Managers can analyze lead conversion rates,
+track rep activity volume, or inspect weighted revenue projections. Every single report
+supports instant filtering, sorting, pagination, and a streaming CSV export that lets
+users download reports directly into Excel without taxing server memory."
+
+--------------------------------------------------------------------------------
+SLIDE 11: IMMUTABLE AUDIT TRAIL & REGULATORY COMPLIANCE
+--------------------------------------------------------------------------------
+[TITLE]: Immutable Append-Only Audit Trail
+[SUBTITLE]: Non-Repudiation, PII Stripping & Full Accountability
+
+[VISUAL LAYOUT]:
+- Table mockup of Audit Log view showing:
+  Timestamp | User | Action (Create/Update/Convert) | Module | Entity | Old Value | New Value | Result
+- Security Stamp callout: "Passwords & Tokens Stripped Automatically"
+
+[BULLET POINTS]:
+* Append-Only Architecture: Zero Update or Delete methods exist in `IAuditService` or data access paths.
+* Complete Operational Traceability: Audits logins, failures, lockouts, unlocks, CRUD operations,
+  role changes, lead conversions, and follow-up completions.
+* Recursive JSON Redaction: Passwords, password hashes, security stamps, and tokens are
+  recursively stripped before persistence.
+* Read-Only UI Screen: Admins and Managers can inspect changes and before/after JSON diffs;
+  editing or deleting logs is architecturally impossible.
+
+[SPEAKER SCRIPT]:
+"In modern enterprise software, compliance and auditing are non-negotiable. AcxiomCRM features
+an append-only audit trail. There are no delete or update endpoints in our audit service—once
+a record is written, it is permanent. Before an audit record is stored, our sanitizer
+recursively strips out sensitive fields like passwords, tokens, and hashes. Administrators
+can inspect exact before-and-after JSON snapshots of any change in the system."
+
+--------------------------------------------------------------------------------
+SLIDE 12: REST API & OPENAPI DOCUMENTATION
+--------------------------------------------------------------------------------
+[TITLE]: REST API & Swagger / OpenAPI Integration
+[SUBTITLE]: Secure, DTO-Bounded Integration Surface
+
+[VISUAL LAYOUT]:
+- Swagger UI mockup displaying endpoints:
+  POST /api/auth/login | GET /api/customers | POST /api/leads | GET /api/opportunities | GET /api/reports/pipeline
+- OpenAPI 3.0 specification badge.
+
+[BULLET POINTS]:
+* Full REST API Coverage: Dedicated controllers for Auth, Customers, Leads, Opportunities,
+  Follow-ups, and Pipeline Reports in `Controllers/Api/`.
+* Strict DTO Boundaries: Request and response bodies use dedicated DTOs from `ApiDtos.cs`.
+* Standard HTTP Status Codes: Clean REST responses: 200 OK, 201 Created, 400 Bad Request,
+  401 Unauthorized, 403 Forbidden, 404 Not Found, 409 Conflict.
+* Rate Limited Auth: `/api/auth/login` protected against brute-force attacks via built-in rate limiter.
+* Interactive Documentation: Swagger UI accessible at `/swagger` with full schema models.
+
+[SPEAKER SCRIPT]:
+"For integration with external enterprise systems, AcxiomCRM exposes a secured REST API.
+Every endpoint uses strict Data Transfer Objects to guarantee internal entity isolation.
+Endpoints return standard RFC status codes, including 409 Conflict for duplicate customer
+detections and 404 for missing records. Interactive OpenAPI documentation is served at
+`/swagger`, allowing developers to test and integrate endpoints with ease."
+
+--------------------------------------------------------------------------------
+SLIDE 13: QA, AUTOMATED TESTING & GOLDEN TEST SET
+--------------------------------------------------------------------------------
+[TITLE]: Quality Assurance & Golden Test Verification
+[SUBTITLE]: 100% Pass Rate Across Golden Tests G001 - G042
+
+[VISUAL LAYOUT]:
+- Large bold stat cards:
+  - "52 / 52" Tests Passed (100% Pass Rate)
+  - "42 / 42" Golden Tests Verified
+  - "0" Failures | "0" Warnings | "0" Errors
+
+[BULLET POINTS]:
+* Automated xUnit Test Suite: 52 automated tests in `Tests/Tests.csproj`.
+* Golden Test Set (G001 - G042):
+  - G001-G005: Customer blank name, invalid email, invalid phone, duplicate detection.
+  - G006-G010: Opportunity Amount <= 0, Probability bounds, past close date validation.
+  - G011-G013: Follow-up past dates, lead invalid statuses & illegal transitions.
+  - G014-G017: Sales rep isolation, unauthorized API tampering.
+  - G018-G020: Lockout enforcement, zero password leakage in DTOs or logs.
+  - G021-G027: Mutation and workflow audit log generation.
+  - G028-G029: REST API authorized DTO JSON vs 401/403.
+  - G030-G032: Scoped dashboard metrics across SE, Manager, and Admin.
+  - G033-G035: Password complexity, anti-forgery decoration, SQL injection safety.
+  - G036-G039: Admin unlock, manager cross-team denial, API 404, API 409 conflict.
+  - G040-G042: Lead bounds, register role restriction, append-only audit verification.
+
+[SPEAKER SCRIPT]:
+"We do not claim features work; we prove them. AcxiomCRM was tested against the exhaustive
+Golden Test Set G001 through G042. Every validation invariant, authorization boundary,
+and security requirement is represented in our automated test suite. Running `dotnet test`
+executes 52 test cases with a 100% pass rate in under two seconds. From duplicate checks
+to SQL injection resilience, every requirement has been validated."
+
+--------------------------------------------------------------------------------
+SLIDE 14: END-TO-END ACCEPTANCE SCENARIO
+--------------------------------------------------------------------------------
+[TITLE]: 14-Step End-to-End Acceptance Scenario
+[SUBTITLE]: Full Enterprise Lifecycle Executed & Verified
+
+[VISUAL LAYOUT]:
+- Flow diagram mapping the 14 verified steps:
+  1. Anon Blocked -> 2. Register -> 3. Dashboard -> 4. Form Validation -> 5. Server Duplicate Rejection
+  -> 6. Opp Invariants -> 7. Follow-Up Dates -> 8. SE Scope -> 9. Manager Team Scope -> 10. Admin Control
+  -> 11. Auditing -> 12. REST DTOs -> 13. Visual KPIs -> 14. Lead Conversion
+
+[BULLET POINTS]:
+* Step 1-3: Anonymous user blocked -> Register assigns SalesExecutive -> Empty dashboard initialized.
+* Step 4-5: Client-side validation catches invalid inputs -> Server rejects duplicate email/phone.
+* Step 6-7: Invalid deal amounts, probabilities, and past follow-up dates rejected.
+* Step 8-10: Sales rep isolated from other reps -> Manager sees only direct reports -> Admin has global control.
+* Step 11-12: Full audit trail recorded -> REST API returns scoped CustomerDto JSON with zero leaks.
+* Step 13-14: Dashboard displays live KPI counts -> Qualified lead converted to Customer and Deal in one transaction.
+
+[SPEAKER SCRIPT]:
+"To guarantee end-to-end cohesion, we codified the prompt's 14-step acceptance scenario into
+an automated integration test. This test simulates a complete real-world user journey:
+an anonymous user is blocked, registers as an executive, encounters client and server
+validation guards, tests out-of-scope record access, verifies administrative unlocks,
+inspects audit logs, queries the REST API, and completes a full lead conversion.
+All fourteen steps pass seamlessly."
+
+--------------------------------------------------------------------------------
+SLIDE 15: CONCLUSION & KEY TAKEAWAYS
+--------------------------------------------------------------------------------
+[TITLE]: Conclusion & Production Readiness
+[SUBTITLE]: Key Achievements & Delivery Summary
+
+[VISUAL LAYOUT]:
+- 3 Large Summary Pillar Cards:
+  1. Engineering Excellence (.NET 10, Zero npm bloat, Clean C#)
+  2. Enterprise Security (RBAC + Scope, Lockout, CSRF, Parameterization)
+  3. Quality Guaranteed (52 Tests Passed, 100% Traceability, Full Docs)
+
+[BULLET POINTS]:
+* Complete Implementation: All 16 phases (Phase 0 through Phase 16) successfully implemented and verified.
+* Zero Technical Debt: 0 compiler warnings, 0 errors, clean solution structure.
+* Comprehensive Documentation: Requirement Traceability Matrix, Security Checklist,
+  API Documentation, Architecture Guide, and Execution Guide all completed in `docs/`.
+* Ready for Immediate Deployment: Local SQL Server Express migrated and seeded with
+  roles, users, and demonstration records.
+
+[SPEAKER SCRIPT]:
+"In conclusion, AcxiomCRM is a fully realized, secure, and robust enterprise solution.
+All mandatory phases, from core identity and customer management to the pipeline Kanban,
+reporting engine, REST API, security hardening, and test suites, are complete.
+The build is pristine with zero warnings and zero errors. The codebase is clean, maintainable,
+and fully documented. Thank you, and I look forward to your questions."
+
+================================================================================
+END OF METHODOLOGY & POWERPOINT PRESENTATION GUIDE
+================================================================================

@@ -1,0 +1,195 @@
+@model AcxiomCRM.Models.Opportunity
+@{
+    ViewData["Title"] = $"Opportunity - {Model.OpportunityName}";
+    var stageBadge = Model.Stage switch {
+        "Qualification" => "bg-info-subtle text-info",
+        "Proposal" => "bg-primary-subtle text-primary",
+        "Negotiation" => "bg-warning-subtle text-warning",
+        "Won" => "bg-success-subtle text-success",
+        "Lost" => "bg-danger-subtle text-danger",
+        _ => "bg-secondary-subtle text-secondary"
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <h2 class="fw-bold mb-0">@Model.OpportunityName</h2>
+            <span class="badge @stageBadge">@Model.Stage</span>
+            <span class="badge @(Model.Status == "Won" ? "bg-success" : Model.Status == "Lost" ? "bg-danger" : "bg-primary")">@Model.Status</span>
+        </div>
+        <p class="text-muted small mb-0">
+            Assigned Owner: <strong>@(Model.AssignedUser?.FullName ?? "Unassigned")</strong> |
+            Created: @Model.CreatedDate.ToString("MMM dd, yyyy")
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Edit" asp-route-id="@Model.OpportunityId" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-pencil me-1"></i> Edit
+        </a>
+        <a asp-controller="FollowUps" asp-action="Create" asp-route-opportunityId="@Model.OpportunityId" class="btn btn-outline-info btn-sm">
+            <i class="bi bi-calendar-plus me-1"></i> Schedule Follow-Up
+        </a>
+        <a asp-action="Index" class="btn btn-outline-dark btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Back
+        </a>
+    </div>
+</div>
+
+<!-- Workflow Stage Actions -->
+@if (Model.Status == "Open")
+{
+    <div class="card shadow-sm border-0 mb-4 bg-light">
+        <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <span class="small fw-semibold text-muted">
+                <i class="bi bi-arrow-right-circle me-1"></i> Advance Stage:
+            </span>
+            <div class="d-flex gap-2">
+                @if (Model.Stage == "Qualification")
+                {
+                    <form asp-action="ChangeStage" asp-route-id="@Model.OpportunityId" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="newStage" value="Proposal" />
+                        <button type="submit" class="btn btn-sm btn-primary">
+                            Move to Proposal <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </form>
+                }
+                @if (Model.Stage == "Proposal")
+                {
+                    <form asp-action="ChangeStage" asp-route-id="@Model.OpportunityId" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="newStage" value="Negotiation" />
+                        <button type="submit" class="btn btn-sm btn-warning">
+                            Move to Negotiation <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </form>
+                }
+                @if (Model.Stage == "Negotiation")
+                {
+                    <form asp-action="ChangeStage" asp-route-id="@Model.OpportunityId" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="newStage" value="Won" />
+                        <button type="submit" class="btn btn-sm btn-success">
+                            <i class="bi bi-trophy-fill me-1"></i> Mark as Won
+                        </button>
+                    </form>
+                }
+                <form asp-action="ChangeStage" asp-route-id="@Model.OpportunityId" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="newStage" value="Lost" />
+                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-x-circle me-1"></i> Mark as Lost
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-5">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-info-circle text-primary me-2"></i>Commercial Metrics</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-4">
+                    <div class="col-6">
+                        <div class="p-3 bg-light rounded text-center">
+                            <small class="text-muted d-block">Deal Value</small>
+                            <span class="fs-4 fw-bold text-dark">@Model.Amount.ToString("C0")</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3 bg-light rounded text-center">
+                            <small class="text-muted d-block">Weighted Value</small>
+                            <span class="fs-4 fw-bold text-primary">@Model.WeightedAmount.ToString("C0")</span>
+                        </div>
+                    </div>
+                </div>
+
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-3">
+                        <small class="text-muted d-block">Customer</small>
+                        @if (Model.Customer != null)
+                        {
+                            <a asp-controller="Customers" asp-action="Details" asp-route-id="@Model.CustomerId" class="fw-semibold text-decoration-none">
+                                @Model.Customer.CustomerName (@Model.Customer.CustomerCode)
+                            </a>
+                        }
+                    </li>
+                    <li class="mb-3">
+                        <small class="text-muted d-block">Probability</small>
+                        <div class="progress mt-1" style="height: 10px;">
+                            <div class="progress-bar bg-success" role="progressbar" style="width: @Model.Probability%;" aria-valuenow="@Model.Probability" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <small class="text-muted">@Model.Probability% estimated likelihood of close</small>
+                    </li>
+                    <li class="mb-3">
+                        <small class="text-muted d-block">Expected Close Date</small>
+                        <span class="fw-semibold">@Model.ExpectedCloseDate.ToString("MMMM dd, yyyy")</span>
+                    </li>
+                    <li class="mb-3">
+                        <small class="text-muted d-block">Lead Source</small>
+                        <span>@(Model.Source ?? "Not specified")</span>
+                    </li>
+                    @if (!string.IsNullOrEmpty(Model.Notes))
+                    {
+                        <li class="mb-0">
+                            <small class="text-muted d-block">Notes</small>
+                            <div class="p-2 bg-light rounded small mt-1">@Model.Notes</div>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-calendar-check text-primary me-2"></i>Follow-Ups (@Model.FollowUps.Count)</h6>
+            </div>
+            <div class="card-body">
+                @if (!Model.FollowUps.Any())
+                {
+                    <div class="text-center py-5 text-muted small">
+                        <i class="bi bi-calendar-check display-6 d-block mb-2"></i>
+                        No follow-ups linked to this opportunity.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 small">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Subject</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var f in Model.FollowUps)
+                                {
+                                    <tr>
+                                        <td><span class="badge bg-light text-dark border">@f.FollowUpType</span></td>
+                                        <td class="fw-semibold">@f.Subject</td>
+                                        <td>@f.FollowUpDate.ToString("MMM dd, yyyy")</td>
+                                        <td>
+                                            <span class="badge @(f.Status == "Completed" ? "bg-success" : f.IsOverdue ? "bg-danger" : "bg-warning text-dark")">
+                                                @(f.IsOverdue ? "Overdue" : f.Status)
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

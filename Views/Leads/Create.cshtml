@@ -1,0 +1,113 @@
+@model AcxiomCRM.Models.Lead
+@{
+    ViewData["Title"] = "Add Lead";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-funnel text-primary me-2"></i>Create New Lead</h5>
+                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i> Back to List
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <partial name="_ValidationSummary" />
+
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="LeadName" class="form-label fw-semibold">Prospect / Lead Name <span class="text-danger">*</span></label>
+                            <input asp-for="LeadName" class="form-control" placeholder="e.g. Charlie Brown" autofocus />
+                            <span asp-validation-for="LeadName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="CompanyName" class="form-label fw-semibold">Company / Organization</label>
+                            <input asp-for="CompanyName" class="form-control" placeholder="e.g. Gamma Retail" />
+                            <span asp-validation-for="CompanyName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Email" class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label>
+                            <input asp-for="Email" class="form-control" placeholder="charlie@gamma.com" />
+                            <span asp-validation-for="Email" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="Phone" class="form-label fw-semibold">Phone Number (10 digits) <span class="text-danger">*</span></label>
+                            <input asp-for="Phone" class="form-control" placeholder="e.g. 9876543212" maxlength="10" />
+                            <span asp-validation-for="Phone" class="text-danger small"></span>
+                            <div class="form-text small">Indian mobile starting with 6-9 (10 digits).</div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="Source" class="form-label fw-semibold">Lead Source</label>
+                            <select asp-for="Source" class="form-select">
+                                <option value="Website">Website</option>
+                                <option value="Referral">Referral</option>
+                                <option value="Cold Call">Cold Call</option>
+                                <option value="Trade Show">Trade Show</option>
+                                <option value="Social Media">Social Media</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <span asp-validation-for="Source" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="Priority" class="form-label fw-semibold">Priority</label>
+                            <select asp-for="Priority" class="form-select">
+                                <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                            </select>
+                            <span asp-validation-for="Priority" class="text-danger small"></span>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label asp-for="ExpectedValue" class="form-label fw-semibold">Expected Deal Value (INR)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₹</span>
+                                <input asp-for="ExpectedValue" class="form-control" type="number" step="1000" min="0" max="100000000" />
+                            </div>
+                            <span asp-validation-for="ExpectedValue" class="text-danger small"></span>
+                        </div>
+
+                        @if (User.IsInRole("Admin") || User.IsInRole("Manager"))
+                        {
+                            <div class="col-md-6">
+                                <label asp-for="AssignedTo" class="form-label fw-semibold">Assign Lead To</label>
+                                <select asp-for="AssignedTo" class="form-select" asp-items="ViewBag.Users">
+                                    <option value="">-- Assign to Me (Default) --</option>
+                                </select>
+                                <span asp-validation-for="AssignedTo" class="text-danger small"></span>
+                            </div>
+                        }
+
+                        <div class="col-12">
+                            <label asp-for="Notes" class="form-label fw-semibold">Notes / Requirements Overview</label>
+                            <textarea asp-for="Notes" class="form-control" rows="3" placeholder="Enter inquiry details, pain points, budget notes..."></textarea>
+                            <span asp-validation-for="Notes" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-save me-1"></i> Save Lead
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
